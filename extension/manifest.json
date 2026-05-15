@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "BASE - QR&Barcode scanner",
+  "version": "1.0.0",
+  "description": "Skanuj kody kreskowe i QR na stronach. Kliknij ikonę, najedź laserem na kod — zostanie skopiowany do schowka.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "clipboardWrite"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "BASE - QR&Barcode scanner — kliknij aby aktywować"
+  }
+}

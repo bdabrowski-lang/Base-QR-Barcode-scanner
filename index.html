@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BASE – QR&amp;Barcode scanner</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red:    #e63000;
+      --red-dk: #b02400;
+      --green:  #00c84a;
+      --bg:     #0d0d0d;
+      --card:   #181818;
+      --border: #2a2a2a;
+      --text:   #e8e8e8;
+      --muted:  #888;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 80px 24px 60px;
+      text-align: center;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(230,48,0,.18) 0%, transparent 70%);
+    }
+    .laser-h, .laser-v {
+      position: absolute;
+      pointer-events: none;
+      opacity: .35;
+    }
+    .laser-h {
+      left: 0; right: 0; height: 2px;
+      top: 55%;
+      background: linear-gradient(90deg, transparent 0%, var(--red) 20%, var(--red) 80%, transparent 100%);
+      box-shadow: 0 0 10px 3px rgba(230,48,0,.6);
+      animation: laserpulse 2.4s ease-in-out infinite;
+    }
+    .laser-v {
+      top: 0; bottom: 0; width: 2px;
+      left: 50%;
+      background: linear-gradient(180deg, transparent 0%, var(--red) 20%, var(--red) 80%, transparent 100%);
+      box-shadow: 0 0 10px 3px rgba(230,48,0,.6);
+      animation: laserpulse 2.4s ease-in-out infinite .6s;
+    }
+    @keyframes laserpulse {
+      0%,100% { opacity: .35; }
+      50%      { opacity: .7; }
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(230,48,0,.15);
+      border: 1px solid rgba(230,48,0,.4);
+      color: var(--red);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.4rem);
+      font-weight: 800;
+      letter-spacing: -.5px;
+      margin-bottom: 16px;
+    }
+    h1 span { color: var(--red); }
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 540px;
+      margin: 0 auto 40px;
+    }
+
+    .hero-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      justify-content: center;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform .15s, box-shadow .15s, filter .15s;
+      border: none;
+    }
+    .btn:hover  { transform: translateY(-2px); filter: brightness(1.1); }
+    .btn:active { transform: translateY(0); }
+    .btn-download {
+      background: var(--red);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(230,48,0,.4);
+    }
+    .btn-install {
+      background: var(--green);
+      color: #000;
+      box-shadow: 0 4px 20px rgba(0,200,74,.35);
+    }
+    .btn-gh {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    /* ── FEATURES ── */
+    .section { padding: 60px 24px; max-width: 900px; margin: 0 auto; }
+    .section h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .feature {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px 20px;
+    }
+    .feature-icon { font-size: 1.8rem; margin-bottom: 10px; }
+    .feature h3  { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    .feature p   { font-size: .875rem; color: var(--muted); }
+
+    /* ── SHORTCUTS ── */
+    .shortcuts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+    .shortcut {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: .875rem;
+    }
+    kbd {
+      display: inline-block;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 5px;
+      padding: 2px 8px;
+      font-family: monospace;
+      font-size: .8rem;
+      color: #fff;
+    }
+
+    /* ── INSTALL MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.75);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 32px;
+      max-width: 520px;
+      width: 100%;
+      position: relative;
+    }
+    .modal h2 { font-size: 1.3rem; margin-bottom: 6px; }
+    .modal .note { font-size: .85rem; color: var(--muted); margin-bottom: 28px; }
+    .steps { list-style: none; }
+    .steps li {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+      font-size: .925rem;
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--red);
+      color: #fff;
+      font-weight: 700;
+      font-size: .8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .steps li p   { padding-top: 4px; }
+    .steps li a   { color: var(--red); }
+    .steps code   {
+      background: #252525;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: .85em;
+    }
+    .modal-close {
+      position: absolute; top: 14px; right: 18px;
+      background: none; border: none;
+      color: var(--muted); font-size: 1.4rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-close:hover { color: #fff; }
+    .modal-download-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 30px 24px 40px;
+      color: var(--muted);
+      font-size: .85rem;
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<!-- ── HERO ─────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="laser-h"></div>
+  <div class="laser-v"></div>
+  <div class="badge">Chrome Extension</div>
+  <h1>BASE &ndash; <span>QR&amp;Barcode</span> scanner</h1>
+  <p class="subtitle">
+    Skanuj kody kreskowe i QR bezpośrednio na stronach internetowych.
+    Laser podąża za kursorem — kliknij, a kod trafi do schowka.
+  </p>
+  <div class="hero-btns">
+    <a id="btn-download" href="extension.zip" download="BASE-QR-Barcode-scanner.zip" class="btn btn-download">
+      ⬇ Pobierz rozszerzenie (.zip)
+    </a>
+    <button class="btn btn-install" onclick="openInstallModal()">
+      ⚡ Jak zainstalować?
+    </button>
+    <a id="btn-gh" href="#" class="btn btn-gh" target="_blank" rel="noopener">
+      ★ GitHub
+    </a>
+  </div>
+</section>
+
+<!-- ── FEATURES ──────────────────────────────────────────────────────────── -->
+<section class="section">
+  <h2>Co potrafi?</h2>
+  <div class="features">
+    <div class="feature">
+      <div class="feature-icon">🔴</div>
+      <h3>Laser poziomy i pionowy</h3>
+      <p>Czerwona linia laserowa podąża za kursorem. Przełącz orientację skrótem <kbd>R</kbd>.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">⊞</div>
+      <h3>Tryb QR</h3>
+      <p>Ramka skanera QR podąża za myszką. Wykrywa QR, Data Matrix, Aztec, PDF417 i inne.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">📋</div>
+      <h3>Kopia do schowka</h3>
+      <p>Po zeskanowaniu wartość kodu jest automatycznie kopiowana do schowka.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🔊</div>
+      <h3>Dźwięk skanera</h3>
+      <p>Krótki sygnał po udanym skanie. Wyciszenie przyciskiem lub skrótem <kbd>M</kbd>.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">⚡</div>
+      <h3>Skanowanie na klik</h3>
+      <p>Celuj laserem, kliknij — kod zeskanowany. Żadnych subskrypcji ani serwerów.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">💾</div>
+      <h3>Zapamiętuje ustawienia</h3>
+      <p>Tryb, orientacja i wyciszenie zapisane lokalnie — zachowane między sesjami.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── SHORTCUTS ─────────────────────────────────────────────────────────── -->
+<section class="section" style="padding-top:0">
+  <h2>Skróty klawiszowe</h2>
+  <div class="shortcuts">
+    <div class="shortcut"><kbd>Klik LPM</kbd> <span>Skanuj</span></div>
+    <div class="shortcut"><kbd>Q</kbd> <span>Kod kreskowy ↔ QR</span></div>
+    <div class="shortcut"><kbd>R</kbd> <span>Orientacja poziomo ↔ pionowo</span></div>
+    <div class="shortcut"><kbd>M</kbd> <span>Wycisz / włącz dźwięk</span></div>
+    <div class="shortcut"><kbd>ESC</kbd> <span>Zamknij skaner</span></div>
+  </div>
+</section>
+
+<!-- ── INSTALL MODAL ──────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="installModal" onclick="closeOnOverlay(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeInstallModal()" title="Zamknij">&times;</button>
+    <h2>⚡ Instalacja rozszerzenia</h2>
+    <p class="note">Chrome nie pozwala instalować rozszerzeń spoza Web Store jednym kliknięciem — wymagany tryb dewelopera (30 sekund).</p>
+    <ol class="steps">
+      <li>
+        <span class="step-num">1</span>
+        <p>
+          Pobierz plik ZIP i <strong>rozpakuj</strong> go w wybranym miejscu na dysku.<br>
+          <span style="color:var(--muted);font-size:.85rem">(prawy klik → Wypakuj wszystko / Extract All)</span>
+        </p>
+      </li>
+      <li>
+        <span class="step-num">2</span>
+        <p>
+          Otwórz Chrome i wejdź na<br>
+          <a href="chrome://extensions" target="_blank"><code>chrome://extensions</code></a>
+        </p>
+      </li>
+      <li>
+        <span class="step-num">3</span>
+        <p>Włącz przełącznik <strong>Tryb dewelopera</strong> (prawy górny róg).</p>
+      </li>
+      <li>
+        <span class="step-num">4</span>
+        <p>Kliknij <strong>Załaduj rozpakowane</strong> i wskaż rozpakowany folder <code>extension/</code>.</p>
+      </li>
+      <li>
+        <span class="step-num">5</span>
+        <p>Gotowe! Ikona skanera pojawi się w pasku Chrome.</p>
+      </li>
+    </ol>
+    <div class="modal-download-row" style="margin-top:24px">
+      <a href="extension.zip" download="BASE-QR-Barcode-scanner.zip" class="btn btn-download" style="flex:1;justify-content:center;font-size:.9rem;padding:12px">
+        ⬇ Pobierz .zip
+      </a>
+      <a href="chrome://extensions" class="btn btn-gh" style="flex:1;justify-content:center;font-size:.9rem;padding:12px" title="Skopiuj adres i wklej w Chrome">
+        ⚙ chrome://extensions
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────────────────── -->
+<footer>
+  <p>BASE – QR&amp;Barcode scanner &nbsp;·&nbsp; <a id="footer-gh" href="#">github.com/bdabrowski-lang</a></p>
+</footer>
+
+<script>
+  // Set GitHub URL dynamically based on current page location
+  const repoUrl = 'https://github.com/bdabrowski-lang/BASE-QR-Barcode-scanner';
+  document.getElementById('btn-gh').href    = repoUrl;
+  document.getElementById('footer-gh').href = repoUrl;
+  document.getElementById('footer-gh').textContent = repoUrl.replace('https://', '');
+
+  function openInstallModal()  { document.getElementById('installModal').classList.add('open'); }
+  function closeInstallModal() { document.getElementById('installModal').classList.remove('open'); }
+  function closeOnOverlay(e)   { if (e.target === e.currentTarget) closeInstallModal(); }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeInstallModal(); });
+</script>
+</body>
+</html>
