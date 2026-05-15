@@ -4,7 +4,7 @@ Chrome extension do skanowania kodów kreskowych i QR bezpośrednio na stronach 
 
 ## Instalacja
 
-1. [Pobierz ZIP](../../raw/main/extension.zip) i rozpakuj
+1. [Pobierz ZIP](../../raw/main/extension.zip)
 2. Otwórz `chrome://extensions`
 3. Włącz **Tryb dewelopera**
 4. Kliknij **Załaduj rozpakowane** → wskaż folder `extension/`
